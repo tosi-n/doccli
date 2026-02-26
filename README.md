@@ -7,8 +7,7 @@ Scope (v1):
 - Conversion pipeline: Docling extraction + HybrIE VLM (`Qwen/Qwen2.5-VL-72B-Instruct`)
 - Durable job execution via Choreo worker
 
-This repo **copies** upstream behavior from `jack-2` into `vendor/jack2/...` as the
-source-of-truth reference for statuses/job flow. We do not move or delete anything from `jack-2`.
+This service is self-contained and focused on internal document extraction workflows.
 
 ## Run (local)
 
@@ -30,4 +29,5 @@ docker run --rm --env-file .env doccli-worker:dev
 - `GET /internal/bank-statement/jobs/{job_id}/transactions`
 - `GET /internal/bank-statement/jobs/{job_id}/csv`
 
-All internal endpoints require `X-Internal-API-Key: $DOCCLI_INTERNAL_API_KEY`.
+Internal endpoints accept `X-Internal-API-Key: $DOCCLI_INTERNAL_API_KEY` when configured.
+If `DOCCLI_INTERNAL_API_KEY` is empty, auth is disabled for private-network deployments.

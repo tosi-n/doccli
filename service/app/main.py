@@ -31,6 +31,7 @@ class CreateJobIn(BaseModel):
     business_profile_id: UUID
     user_id: UUID
     input_file_url: str
+    input_document_id: str | None = None
     month_key: str | None = None
     currency: str | None = None
 
@@ -42,6 +43,7 @@ async def create_job(body: CreateJobIn) -> dict[str, Any]:
             business_profile_id=str(body.business_profile_id),
             user_id=str(body.user_id),
             input_file_url=body.input_file_url,
+            input_document_id=body.input_document_id,
             month_key=body.month_key,
             currency=body.currency,
             status="queued",
@@ -78,6 +80,8 @@ async def get_job(job_id: str) -> dict[str, Any]:
             "progress": job.progress,
             "output_csv_url": job.output_csv_url,
             "output_json_url": job.output_json_url,
+            "output_csv_document_id": job.output_csv_document_id,
+            "output_json_document_id": job.output_json_document_id,
             "error": job.error,
         }
 
@@ -99,5 +103,7 @@ async def get_csv(job_id: str) -> dict[str, Any]:
         job = res.scalars().first()
         if not job:
             raise HTTPException(status_code=404, detail="Job not found")
-        return {"output_csv_url": job.output_csv_url}
-
+        return {
+            "output_csv_url": job.output_csv_url,
+            "output_csv_document_id": job.output_csv_document_id,
+        }

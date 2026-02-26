@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    DOCCLI_INTERNAL_API_KEY: str
+    DOCCLI_INTERNAL_API_KEY: str = ""
     DOCCLI_DATABASE_URL: str = "sqlite+aiosqlite:////data/doccli.db"
 
     # Backend owns storage credentials; doccli sends bytes to backend upload endpoint.
@@ -20,4 +20,3 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-

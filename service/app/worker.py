@@ -29,7 +29,7 @@ async def _backend_upload_bytes(
     content_type: str,
     data: bytes,
     metadata: dict[str, Any] | None = None,
-) -> str:
+) -> dict[str, Any]:
     files = {"file": (filename, data, content_type)}
     form = {
         "business_profile_id": business_profile_id,
@@ -38,19 +38,23 @@ async def _backend_upload_bytes(
     }
     if metadata:
         form["metadata_json"] = json.dumps(metadata)
+    headers = {}
+    if settings.DOCCLI_INTERNAL_API_KEY:
+        headers["X-Internal-API-Key"] = settings.DOCCLI_INTERNAL_API_KEY
     async with httpx.AsyncClient(timeout=120.0) as client:
         resp = await client.post(
             settings.BACKEND_INTERNAL_UPLOAD_URL,
-            headers={"X-Internal-API-Key": settings.DOCCLI_INTERNAL_API_KEY},
+            headers=headers,
             data=form,
             files=files,
         )
         resp.raise_for_status()
         out = resp.json()
-        url = out.get("url")
-        if not url:
-            raise RuntimeError("Backend upload returned no url")
-        return str(url)
+        if not isinstance(out, dict):
+            raise RuntimeError("Backend upload returned invalid payload")
+        if not out.get("document_id"):
+            raise RuntimeError("Backend upload returned no document_id")
+        return out
 
 
 def _transactions_to_csv_bytes(transactions: list[dict[str, Any]]) -> bytes:
@@ -128,7 +132,7 @@ async def process_job(ctx, step):
         json_bytes = json.dumps({"transactions": txs}, indent=2).encode("utf-8")
         csv_bytes = _transactions_to_csv_bytes(txs)
 
-        out_json_url = await step.run(
+        out_json_upload = await step.run(
             "upload-json",
             lambda: _backend_upload_bytes(
                 business_profile_id=job.business_profile_id,
@@ -136,10 +140,10 @@ async def process_job(ctx, step):
                 filename=f"bank_statement_{job_id}.json",
                 content_type="application/json",
                 data=json_bytes,
-                metadata={"job_id": job_id},
+                metadata={"job_id": job_id, "document_kind": "bank_statement_output_json"},
             ),
         )
-        out_csv_url = await step.run(
+        out_csv_upload = await step.run(
             "upload-csv",
             lambda: _backend_upload_bytes(
                 business_profile_id=job.business_profile_id,
@@ -147,9 +151,11 @@ async def process_job(ctx, step):
                 filename=f"bank_statement_{job_id}.csv",
                 content_type="text/csv",
                 data=csv_bytes,
-                metadata={"job_id": job_id},
+                metadata={"job_id": job_id, "document_kind": "bank_statement_output_csv"},
             ),
         )
+        out_json_url = out_json_upload.get("url")
+        out_csv_url = out_csv_upload.get("url")
 
         async for db in session_scope():
             await db.execute(
@@ -161,6 +167,8 @@ async def process_job(ctx, step):
                     transactions=txs,
                     output_csv_url=out_csv_url,
                     output_json_url=out_json_url,
+                    output_csv_document_id=out_csv_upload.get("document_id"),
+                    output_json_document_id=out_json_upload.get("document_id"),
                     error=None,
                 )
             )

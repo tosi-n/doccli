@@ -22,6 +22,7 @@ class BankStatementJob(Base):
     business_profile_id: Mapped[str] = mapped_column(String(64), nullable=False)
     user_id: Mapped[str] = mapped_column(String(64), nullable=False)
     input_file_url: Mapped[str] = mapped_column(Text, nullable=False)
+    input_document_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     month_key: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
     currency: Mapped[Optional[str]] = mapped_column(String(8), nullable=True)
 
@@ -32,6 +33,8 @@ class BankStatementJob(Base):
     transactions: Mapped[list[dict[str, Any]]] = mapped_column(JSON, nullable=False, default=list)
     output_csv_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     output_json_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    output_csv_document_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    output_json_document_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
 
     created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=lambda: dt.datetime.now(dt.UTC))
     updated_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=lambda: dt.datetime.now(dt.UTC), onupdate=lambda: dt.datetime.now(dt.UTC))
@@ -65,4 +68,3 @@ async def session_scope() -> AsyncIterator[AsyncSession]:
     Session = get_sessionmaker()
     async with Session() as session:
         yield session
-
